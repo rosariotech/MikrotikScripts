@@ -1,0 +1,52 @@
+# Script to add target web sites DNS IP addresses into address list
+# Tested with Mikrotik 6.3x
+# Syed Jahanzaib / aacable@hotmail.com
+# List name
+:local LISTNAME "redessociais"
+ 
+# Web site names which will be added in address list
+:local TARGET1 "facebook.com"
+:local TARGET2 "fbcd.net"
+:local TARGET3 "twitter.com"
+:local TARGET4 "instagram.com"
+:local TARGET5 "whatsapp.com"
+:local TARGET6 "tumblr.com"
+:local TARGET7 "pinterest.com"
+ 
+# 1st time runner, check if address list is not created previously and add entries in it for 1st time usage
+:if ( [/ip firewall address-list find where list=$LISTNAME] = "") do={
+:log warning "No address list for $TARGET1 and $TARGET2 found ! creating and adding resolved entry for 1st time usage ... zaib"
+ 
+:resolve $TARGET1
+:resolve $TARGET2
+:resolve $TARGET3
+:resolve $TARGET4
+:resolve $TARGET5
+:resolve $TARGET6
+:resolve $TARGET7
+ 
+/ip firewall address-list add list=$LISTNAME
+} else={
+:log warning "Previous List for $LISTNAME found ! moving forward and checking if DNS entries can be added in it ..."
+}
+ 
+# Check DNS entries and collect matching names
+:foreach i in=[/ip dns cache all find where (name~"$TARGET1" || name~"$TARGET2" || name~"$TARGET3" || name~"$TARGET4" || name~"$TARGET5" || name~"$TARGET6" || name~"$TARGET7" ) && (type="A") ] do={
+ 
+# Get IP Address from the names and hold it in temporary buffer
+:local Buffer [/ip dns cache get $i address];
+delay delay-time=10ms
+ 
+# Check if entry is already not exists, then OK, otherwise ignore duplication
+:if ( [/ip firewall address-list find where address=$Buffer] = "") do={ 
+ 
+# Fetch DNS names for the entries
+:local sitednsname [/ip dns cache get $i name] ;
+ 
+# Print name in LOG window
+:log info ("added entry: $sitednsname $Buffer");
+ 
+# Add IP addresses and there names to the address list
+/ip firewall address-list add address=$Buffer list=$LISTNAME comment=$sitednsname;
+}
+}
